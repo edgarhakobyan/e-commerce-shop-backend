@@ -1,9 +1,11 @@
 package com.edgar.e_commerce_shop_backend.controller.auth;
 
 import com.edgar.e_commerce_shop_backend.dto.request.LoginBody;
+import com.edgar.e_commerce_shop_backend.dto.request.PasswordResetBody;
 import com.edgar.e_commerce_shop_backend.dto.request.RegistrationBody;
 import com.edgar.e_commerce_shop_backend.dto.response.LoginResponse;
 import com.edgar.e_commerce_shop_backend.exception.EmailFailureException;
+import com.edgar.e_commerce_shop_backend.exception.EmailNotFoundException;
 import com.edgar.e_commerce_shop_backend.exception.UserAlreadyExistsException;
 import com.edgar.e_commerce_shop_backend.exception.UserNotVerifiedException;
 import com.edgar.e_commerce_shop_backend.model.LocalUser;
@@ -72,5 +74,23 @@ public class AuthenticationController {
     @GetMapping("/me")
     public LocalUser getLoggedInUserProfile(@AuthenticationPrincipal LocalUser user) {
         return user;
+    }
+
+    @PostMapping("/forgot")
+    public ResponseEntity forgotPassword(@RequestParam String email) {
+        try {
+            userService.forgotPassword(email);
+            return ResponseEntity.ok().build();
+        } catch (EmailNotFoundException ex) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+        } catch (EmailFailureException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    @PostMapping("/reset")
+    public ResponseEntity resetPassword(@Valid @RequestBody PasswordResetBody body) {
+        userService.resetPassword(body);
+        return ResponseEntity.ok().build();
     }
 }

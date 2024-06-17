@@ -1,8 +1,10 @@
 package com.edgar.e_commerce_shop_backend.service;
 
 import com.edgar.e_commerce_shop_backend.dto.request.LoginBody;
+import com.edgar.e_commerce_shop_backend.dto.request.PasswordResetBody;
 import com.edgar.e_commerce_shop_backend.dto.request.RegistrationBody;
 import com.edgar.e_commerce_shop_backend.exception.EmailFailureException;
+import com.edgar.e_commerce_shop_backend.exception.EmailNotFoundException;
 import com.edgar.e_commerce_shop_backend.exception.UserAlreadyExistsException;
 import com.edgar.e_commerce_shop_backend.exception.UserNotVerifiedException;
 import com.edgar.e_commerce_shop_backend.model.LocalUser;
@@ -96,5 +98,26 @@ public class UserService {
         verificationToken.setUser(user);
         user.getVerificationTokens().add(verificationToken);
         return verificationToken;
+    }
+
+    public void forgotPassword(String email) throws EmailNotFoundException, EmailFailureException {
+        Optional<LocalUser> opUser = localUserDAO.findByEmailIgnoreCase(email);
+        if (opUser.isPresent()) {
+            LocalUser user = opUser.get();
+            String token = jwtService.generatePasswordResetJWT(user);
+            emailService.sendPasswordResetEmail(user, token);
+        } else {
+            throw new EmailNotFoundException();
+        }
+    }
+
+    public void resetPassword(PasswordResetBody body) {
+        String email = jwtService.getResetPasswordEmail(body.getToken());
+        Optional<LocalUser> opUser = localUserDAO.findByEmailIgnoreCase(email);
+        if (opUser.isPresent()) {
+            LocalUser user = opUser.get();
+            user.setPassword(encryptionService.encryptPassword(body.getPassword()));
+            localUserDAO.save(user);
+        }
     }
 }

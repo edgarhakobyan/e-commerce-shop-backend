@@ -1,12 +1,18 @@
 package com.edgar.e_commerce_shop_backend.service;
 
 import com.edgar.e_commerce_shop_backend.dto.request.LoginBody;
+import com.edgar.e_commerce_shop_backend.dto.request.PasswordResetBody;
 import com.edgar.e_commerce_shop_backend.dto.request.RegistrationBody;
 import com.edgar.e_commerce_shop_backend.exception.EmailFailureException;
+import com.edgar.e_commerce_shop_backend.exception.EmailNotFoundException;
 import com.edgar.e_commerce_shop_backend.exception.UserAlreadyExistsException;
 import com.edgar.e_commerce_shop_backend.exception.UserNotVerifiedException;
+import com.edgar.e_commerce_shop_backend.model.LocalUser;
 import com.edgar.e_commerce_shop_backend.model.VerificationToken;
+import com.edgar.e_commerce_shop_backend.model.dao.LocalUserDAO;
 import com.edgar.e_commerce_shop_backend.model.dao.VerificationTokenDAO;
+import jakarta.mail.Message;
+import jakarta.mail.MessagingException;
 import jakarta.transaction.Transactional;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -23,6 +29,12 @@ public class UserServiceTest {
     private UserService userService;
     @Autowired
     private VerificationTokenDAO verificationTokenDAO;
+    @Autowired
+    private LocalUserDAO localUserDAO;
+    @Autowired
+    private JWTService jwtService;
+    @Autowired
+    private EncryptionService encryptionService;
 
     @Test
     @Transactional
@@ -95,5 +107,28 @@ public class UserServiceTest {
             Assertions.assertTrue(userService.verifyUser(token), "Token should be valid.");
             Assertions.assertNotNull(body, "The user should now be verified.");
         }
+    }
+
+    @Test
+    @Transactional
+    public void testForgotPassword() {
+        Assertions.assertThrows(EmailNotFoundException.class,
+                () -> userService.forgotPassword("UserNotExist@junit.com"));
+        Assertions.assertDoesNotThrow(() -> userService.forgotPassword(
+                "user_a@test.com"), "Non existing email should be rejected.");
+    }
+
+    @Test
+    @Transactional
+    public void testResetPassword() {
+        LocalUser user = localUserDAO.findByUsernameIgnoreCase("UserA").get();
+        String token = jwtService.generatePasswordResetJWT(user);
+        PasswordResetBody body = new PasswordResetBody();
+        body.setToken(token);
+        body.setPassword("Password123456");
+        userService.resetPassword(body);
+        user = localUserDAO.findByUsernameIgnoreCase("UserA").get();
+        Assertions.assertTrue(encryptionService.verifyPassword("Password123456",
+                user.getPassword()), "Password change should be written to DB.");
     }
 }
