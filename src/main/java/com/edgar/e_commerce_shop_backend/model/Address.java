@@ -23,6 +23,10 @@ public class Address {
     @JoinColumn(name = "user_id", nullable = false)
     private LocalUser user;
 
+    public void setId(Long id) {
+        this.id = id;
+    }
+
     public Long getId() {
         return id;
     }
@@ -41,6 +45,10 @@ public class Address {
 
     public String getCountry() {
         return country;
+    }
+
+    public void setUser(LocalUser user) {
+        this.user = user;
     }
 
     public LocalUser getUser() {
